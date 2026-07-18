@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/AuthContext";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Trophy, RotateCcw, ArrowRight, ChevronDown, ChevronRight, LogOut, Crown, History } from "lucide-react";
 import { dealRound } from "@/lib/game";
+import { getPlayerId } from "@/lib/localPlayer";
 
 export default function Placar() {
   const { gameId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const playerId = getPlayerId();
   const [game, setGame] = useState(null);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +56,7 @@ export default function Placar() {
   };
 
   const nextRound = async () => {
-    if (!game || !user) return;
+    if (!game) return;
     setAdvancing(true);
     try {
       const abandoned = game.abandoned_players || [];
@@ -67,7 +67,7 @@ export default function Placar() {
         safety++;
       }
       const newSubRound = game.current_sub_round + 1;
-      await dealRound(gameId, game, user.id, newSubRound, nextPe);
+      await dealRound(gameId, game, playerId, newSubRound, nextPe);
       navigate(`/game/${gameId}/palpites`);
     } catch (e) {
       setAdvancing(false);
@@ -92,7 +92,7 @@ export default function Placar() {
 
   const abandoned = game.abandoned_players || [];
   const isFinished = game.status === "finalizado";
-  const isHost = game.host_user_id === user?.id;
+  const isHost = game.host_user_id === playerId;
 
   const standings = game.players.map((name, index) => {
     const playerEntries = entries.filter((e) => e.player_order === index);

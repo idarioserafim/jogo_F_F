@@ -4,17 +4,11 @@ import { queryClientInstance } from "@/lib/query-client";
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import PageNotFound from "@/lib/PageNotFound";
-import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import PageWrapper from '@/components/PageWrapper';
 import StickyScoreboard from '@/components/StickyScoreboard';
 import BottomNav from '@/components/BottomNav';
 // Add page imports here
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
-import ForgotPassword from '@/pages/ForgotPassword';
-import ResetPassword from '@/pages/ResetPassword';
 import Home from '@/pages/Home';
 import Palpites from '@/pages/Palpites';
 import Resultados from '@/pages/Resultados';
@@ -30,10 +24,6 @@ const AnimatedRoutes = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         {/* Add your page Route elements here */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<PageWrapper><Home /></PageWrapper>} />
         <Route path="/historico" element={<PageWrapper><Historico /></PageWrapper>} />
         <Route path="/configuracoes" element={<PageWrapper><Configuracoes /></PageWrapper>} />
@@ -48,52 +38,17 @@ const AnimatedRoutes = () => {
   );
 };
 
-const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
-
-  // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  // Handle authentication errors
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
-    }
-  }
-
-  // Render the main app
-  return (
-    <>
-      <AnimatedRoutes />
-      <StickyScoreboard />
-      <BottomNav />
-    </>
-  );
-};
-
-
 function App() {
-
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <ScrollToTop />
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClientInstance}>
+      <Router>
+        <ScrollToTop />
+        <AnimatedRoutes />
+        <StickyScoreboard />
+        <BottomNav />
+      </Router>
+      <Toaster />
+    </QueryClientProvider>
   )
 }
 

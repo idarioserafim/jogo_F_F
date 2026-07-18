@@ -6,9 +6,6 @@ export default function BottomNav() {
   const location = useLocation();
   const pathname = location.pathname;
 
-  const authRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
-  if (authRoutes.some((r) => pathname.startsWith(r))) return null;
-
   const isGameRoute = pathname.startsWith("/game/");
   const tabs = [
     { to: "/", icon: Home, label: "Início", active: pathname === "/" || isGameRoute },

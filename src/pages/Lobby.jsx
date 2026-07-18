@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/AuthContext";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Copy, Check, Users, Play } from "lucide-react";
 import { dealRound } from "@/lib/game";
+import { getPlayerId } from "@/lib/localPlayer";
 
 export default function Lobby() {
   const { gameId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const playerId = getPlayerId();
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -40,7 +40,7 @@ export default function Lobby() {
     return () => { cancelled = true; if (typeof unsub === "function") unsub(); };
   }, [gameId]);
 
-  const isHost = game && user && game.host_user_id === user.id;
+  const isHost = game && game.host_user_id === playerId;
 
   const copyCode = () => {
     if (navigator.clipboard && game) {
@@ -51,10 +51,10 @@ export default function Lobby() {
   };
 
   const startGame = async () => {
-    if (!game || !user) return;
+    if (!game) return;
     setStarting(true);
     try {
-      await dealRound(gameId, game, user.id);
+      await dealRound(gameId, game, playerId);
     } catch (e) {
       setStarting(false);
     }

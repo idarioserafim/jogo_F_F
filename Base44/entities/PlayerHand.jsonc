@@ -34,33 +34,5 @@
     "player_user_id",
     "cards",
     "sub_round_number"
-  ],
-  "rls": {
-    "read": {
-      "data.player_user_id": "{{user.id}}"
-    },
-    "create": {
-      "$or": [
-        {
-          "data.player_user_id": "{{user.id}}"
-        },
-        {
-          "data.host_user_id": "{{user.id}}"
-        }
-      ]
-    },
-    "update": {
-      "data.player_user_id": "{{user.id}}"
-    },
-    "delete": {
-      "$or": [
-        {
-          "data.player_user_id": "{{user.id}}"
-        },
-        {
-          "data.host_user_id": "{{user.id}}"
-        }
-      ]
-    }
-  }
+  ]
 }

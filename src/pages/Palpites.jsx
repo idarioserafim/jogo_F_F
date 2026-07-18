@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/AuthContext";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +7,12 @@ import { ArrowLeft, Check, Clock } from "lucide-react";
 import CardView from "@/components/Card";
 import { getActivePlayerOrders, calcCardsPerPlayer } from "@/lib/game";
 import { sortHand } from "@/lib/cards";
+import { getPlayerId } from "@/lib/localPlayer";
 
 export default function Palpites() {
   const { gameId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const playerId = getPlayerId();
   const [game, setGame] = useState(null);
   const [hand, setHand] = useState(null);
   const [entries, setEntries] = useState([]);
@@ -33,10 +33,10 @@ export default function Palpites() {
         if (g.status === "finalizado") { navigate(`/game/${gameId}/placar`); return; }
         if (g.status === "aguardando") { navigate(`/game/${gameId}/lobby`); return; }
         setGame(g);
-        const mySeat = (g.player_user_ids || []).indexOf(user?.id);
+        const mySeat = (g.player_user_ids || []).indexOf(playerId);
         if (mySeat >= 0) {
           const hands = await base44.entities.PlayerHand.filter({
-            game_id: gameId, player_user_id: user.id, sub_round_number: g.current_sub_round,
+            game_id: gameId, player_user_id: playerId, sub_round_number: g.current_sub_round,
           });
           if (!cancelled && hands.length > 0) setHand(hands[0]);
         }
@@ -112,7 +112,7 @@ export default function Palpites() {
     );
   }
 
-  const mySeat = (game.player_user_ids || []).indexOf(user?.id);
+  const mySeat = (game.player_user_ids || []).indexOf(playerId);
   const abandoned = game.abandoned_players || [];
   const activeOrders = getActivePlayerOrders(game);
   const isPlayer = mySeat >= 0 && !abandoned.includes(game.players[mySeat]);

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/AuthContext";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { getPlayerId } from "@/lib/localPlayer";
 
 export default function Resultados() {
   const { gameId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const playerId = getPlayerId();
   const [game, setGame] = useState(null);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +74,7 @@ export default function Resultados() {
     );
   }
 
-  const isHost = game.host_user_id === user?.id;
+  const isHost = game.host_user_id === playerId;
 
   return (
     <div

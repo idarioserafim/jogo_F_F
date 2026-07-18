@@ -1,16 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/AuthContext";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spade, Plus, LogIn, History } from "lucide-react";
 import { generateRoomCode } from "@/lib/game";
+import { getPlayerId, getPlayerName, setPlayerName } from "@/lib/localPlayer";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
-  const [name, setName] = useState(user?.full_name || (user?.email ? user.email.split("@")[0] : ""));
+  const [name, setName] = useState(getPlayerName());
   const [code, setCode] = useState("");
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -19,16 +18,18 @@ export default function Home() {
 
   const createRoom = async () => {
     const playerName = name.trim();
-    if (!playerName || !user) return;
+    if (!playerName) return;
+    setPlayerName(playerName);
+    const playerId = getPlayerId();
     setCreating(true);
     setError("");
     try {
       const roomCode = generateRoomCode();
       const game = await base44.entities.Game.create({
         room_code: roomCode,
-        host_user_id: user.id,
+        host_user_id: playerId,
         players: [playerName],
-        player_user_ids: [user.id],
+        player_user_ids: [playerId],
         abandoned_players: [],
         current_sub_round: 1,
         current_pe_index: 0,
@@ -46,7 +47,9 @@ export default function Home() {
   const joinRoom = async () => {
     const playerName = name.trim();
     const roomCode = code.trim().toUpperCase();
-    if (!playerName || !roomCode || !user) return;
+    if (!playerName || !roomCode) return;
+    setPlayerName(playerName);
+    const playerId = getPlayerId();
     setJoining(true);
     setError("");
     try {
@@ -57,7 +60,7 @@ export default function Home() {
         return;
       }
       const game = games[0];
-      if (game.player_user_ids && game.player_user_ids.includes(user.id)) {
+      if (game.player_user_ids && game.player_user_ids.includes(playerId)) {
         navigate(`/game/${game.id}/lobby`);
         return;
       }
@@ -73,7 +76,7 @@ export default function Home() {
       }
       await base44.entities.Game.update(game.id, {
         players: [...game.players, playerName],
-        player_user_ids: [...(game.player_user_ids || []), user.id],
+        player_user_ids: [...(game.player_user_ids || []), playerId],
       });
       navigate(`/game/${game.id}/lobby`);
     } catch (e) {
@@ -81,28 +84,6 @@ export default function Home() {
       setJoining(false);
     }
   };
-
-  if (!isAuthenticated || !user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center app-pad">
-        <div className="w-full max-w-md text-center pb-16">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 mb-4">
-            <Spade className="w-8 h-8 text-amber-500" fill="currentColor" />
-          </div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">Fodinha</h1>
-          <p className="text-slate-400 mt-2 mb-8 text-sm">
-            Faça login para criar ou entrar em uma sala
-          </p>
-          <Button
-            onClick={() => navigate("/login")}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold h-12 text-base"
-          >
-            <LogIn className="w-4 h-4 mr-2" /> Entrar
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
