@@ -1,0 +1,36 @@
+{
+  "name": "RoundEntry",
+  "type": "object",
+  "properties": {
+    "game_id": {
+      "type": "string"
+    },
+    "sub_round_number": {
+      "type": "number"
+    },
+    "player_name": {
+      "type": "string"
+    },
+    "player_order": {
+      "type": "number"
+    },
+    "palpite": {
+      "type": "number"
+    },
+    "resultado": {
+      "type": "number",
+      "default": -1
+    },
+    "points": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "game_id",
+    "sub_round_number",
+    "player_name",
+    "player_order",
+    "palpite"
+  ]
+}

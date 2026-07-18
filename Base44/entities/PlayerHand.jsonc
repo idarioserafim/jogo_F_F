@@ -1,0 +1,66 @@
+{
+  "name": "PlayerHand",
+  "type": "object",
+  "properties": {
+    "game_id": {
+      "type": "string"
+    },
+    "player_order": {
+      "type": "number"
+    },
+    "player_user_id": {
+      "type": "string"
+    },
+    "player_name": {
+      "type": "string"
+    },
+    "cards": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": []
+    },
+    "sub_round_number": {
+      "type": "number"
+    },
+    "host_user_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "game_id",
+    "player_order",
+    "player_user_id",
+    "cards",
+    "sub_round_number"
+  ],
+  "rls": {
+    "read": {
+      "data.player_user_id": "{{user.id}}"
+    },
+    "create": {
+      "$or": [
+        {
+          "data.player_user_id": "{{user.id}}"
+        },
+        {
+          "data.host_user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "data.player_user_id": "{{user.id}}"
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.player_user_id": "{{user.id}}"
+        },
+        {
+          "data.host_user_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
+}
