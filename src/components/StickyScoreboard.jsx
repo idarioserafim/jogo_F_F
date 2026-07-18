@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { db } from "@/api/gameClient";
 import { Crown } from "lucide-react";
 
 export default function StickyScoreboard() {
@@ -20,14 +20,14 @@ export default function StickyScoreboard() {
     let cancelled = false;
     const load = async () => {
       try {
-        const g = await base44.entities.Game.get(gameId);
+        const g = await db.entities.Game.get(gameId);
         if (cancelled) return;
         if (!g) {
           setGame(null);
           return;
         }
         setGame(g);
-        const all = await base44.entities.RoundEntry.filter({ game_id: gameId });
+        const all = await db.entities.RoundEntry.filter({ game_id: gameId });
         if (cancelled) return;
         setEntries(all);
       } catch (e) {
@@ -36,14 +36,14 @@ export default function StickyScoreboard() {
     };
     load();
 
-    const unsubEntries = base44.entities.RoundEntry.subscribe(() => {
+    const unsubEntries = db.entities.RoundEntry.subscribe(() => {
       if (cancelled) return;
-      base44.entities.RoundEntry
+      db.entities.RoundEntry
         .filter({ game_id: gameId })
         .then((all) => { if (!cancelled) setEntries(all); })
         .catch(() => {});
     });
-    const unsubGame = base44.entities.Game.subscribe((event) => {
+    const unsubGame = db.entities.Game.subscribe((event) => {
       if (cancelled) return;
       if (event.data && event.data.id === gameId) {
         if (event.type === "delete") {

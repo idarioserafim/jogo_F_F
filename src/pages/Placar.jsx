@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { Trophy, RotateCcw, ArrowRight, ChevronDown, ChevronRight, LogOut, Crown, History } from "lucide-react";
 import { dealRound } from "@/lib/game";
@@ -22,13 +22,13 @@ export default function Placar() {
     let cancelled = false;
     const load = async () => {
       try {
-        const g = await base44.entities.Game.get(gameId);
+        const g = await db.entities.Game.get(gameId);
         if (cancelled) return;
         if (g.status === "palpites") { navigate(`/game/${gameId}/palpites`); return; }
         if (g.status === "mesa") { navigate(`/game/${gameId}/mesa`); return; }
         if (g.status === "aguardando") { navigate(`/game/${gameId}/lobby`); return; }
         setGame(g);
-        const allEntries = await base44.entities.RoundEntry.filter({ game_id: gameId });
+        const allEntries = await db.entities.RoundEntry.filter({ game_id: gameId });
         if (cancelled) return;
         setEntries(allEntries);
         const lastRound = g.current_sub_round;
@@ -37,7 +37,7 @@ export default function Placar() {
       if (!cancelled) setLoading(false);
     };
     load();
-    const unsub = base44.entities.Game.subscribe((event) => {
+    const unsub = db.entities.Game.subscribe((event) => {
       if (cancelled || !event.data || event.data.id !== gameId) return;
       setGame(event.data);
     });
@@ -47,7 +47,7 @@ export default function Placar() {
   const endGame = async () => {
     setEnding(true);
     try {
-      await base44.entities.Game.update(gameId, { status: "finalizado" });
+      await db.entities.Game.update(gameId, { status: "finalizado" });
       setGame({ ...game, status: "finalizado" });
       setShowConfirmEnd(false);
     } catch (e) {

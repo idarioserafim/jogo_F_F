@@ -1,5 +1,5 @@
-import { base44 } from "@/api/base44Client";
-import { createDeck, shuffleDeck, compareCards } from "./cards";
+import { db } from "@/api/gameClient";
+import { createDeck, shuffleDeck, compareCards, getCardStrength } from "./cards";
 
 export function generateRoomCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -23,16 +23,30 @@ export function getActivePlayerOrders(game) {
   return orders;
 }
 
+// Retorna o resultado de uma vaza.
+// - Se um jogador venceu: { winner: <player_order>, tie: false }
+// - Se empatou (duas ou mais cartas de maior força iguais, ninguém bateu):
+//   { winner: null, tie: true, firstTied: <player_order de quem empatou primeiro>, tiedCards: [...] }
 export function determineTrickWinner(trick, vira) {
-  let winner = trick[0].player_order;
-  let winnerCard = trick[0].card;
-  for (let i = 1; i < trick.length; i++) {
-    if (compareCards(trick[i].card, winnerCard, vira) > 0) {
-      winner = trick[i].player_order;
-      winnerCard = trick[i].card;
-    }
+  let maxStrength = -1;
+  for (const play of trick) {
+    const s = getCardStrength(play.card, vira);
+    if (s > maxStrength) maxStrength = s;
   }
-  return winner;
+  const topPlays = trick.filter((play) => getCardStrength(play.card, vira) === maxStrength);
+
+  if (topPlays.length > 1) {
+    // topPlays[0] é quem jogou a carta mais forte primeiro (o "líder"),
+    // topPlays[1] é quem empatou essa carta pela primeira vez — é ele quem
+    // sai jogando na próxima vaza, e não quem liderou originalmente.
+    return {
+      winner: null,
+      tie: true,
+      firstTied: topPlays[1].player_order,
+      tiedCards: topPlays.map((p) => p.card),
+    };
+  }
+  return { winner: topPlays[0].player_order, tie: false };
 }
 
 export function calcCardsPerPlayer(numPlayers) {
@@ -63,13 +77,13 @@ export async function dealRound(gameId, game, hostUserId, newSubRound, newPeInde
     sub_round_number: subRound,
     host_user_id: hostUserId,
   }));
-  await base44.entities.PlayerHand.bulkCreate(handEntries);
+  await db.entities.PlayerHand.bulkCreate(handEntries);
 
   const tempGame = { ...game, current_pe_index: peIndex };
   const activeOrders = getActivePlayerOrders(tempGame);
   const firstPlayer = activeOrders[0] ?? 0;
 
-  await base44.entities.Game.update(gameId, {
+  await db.entities.Game.update(gameId, {
     status: "palpites",
     current_sub_round: subRound,
     current_pe_index: peIndex,
@@ -81,5 +95,7 @@ export async function dealRound(gameId, game, hostUserId, newSubRound, newPeInde
     current_player_index: firstPlayer,
     tricks_won: game.players.map(() => 0),
     trick_winner: -1,
+    trick_tied: false,
+    dead_pile: [],
   });
 }

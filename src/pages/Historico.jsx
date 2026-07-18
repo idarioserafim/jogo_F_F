@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Crown, ChevronRight, History, Trash2 } from "lucide-react";
 import PullToRefresh from "@/components/PullToRefresh";
@@ -21,11 +21,11 @@ export default function Historico() {
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const allGames = await base44.entities.Game.filter({ status: "finalizado" });
+      const allGames = await db.entities.Game.filter({ status: "finalizado" });
       allGames.sort((a, b) => new Date(b.updated_date) - new Date(a.updated_date));
       setGames(allGames);
       if (allGames.length > 0) {
-        const allEntries = await base44.entities.RoundEntry.list("-created_date", 2000);
+        const allEntries = await db.entities.RoundEntry.list("-created_date", 2000);
         setEntries(allEntries);
       } else {
         setEntries([]);
@@ -38,9 +38,9 @@ export default function Historico() {
     setClearing(true);
     try {
       const gameIds = games.map((g) => g.id);
-      await base44.entities.Game.deleteMany({ status: "finalizado" });
+      await db.entities.Game.deleteMany({ status: "finalizado" });
       for (const gid of gameIds) {
-        await base44.entities.RoundEntry.deleteMany({ game_id: gid });
+        await db.entities.RoundEntry.deleteMany({ game_id: gid });
       }
       setGames([]);
       setEntries([]);

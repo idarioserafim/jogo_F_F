@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Copy, Check, Users, Play } from "lucide-react";
 import { dealRound } from "@/lib/game";
@@ -19,7 +19,7 @@ export default function Lobby() {
     let cancelled = false;
     const load = async () => {
       try {
-        const g = await base44.entities.Game.get(gameId);
+        const g = await db.entities.Game.get(gameId);
         if (cancelled) return;
         if (g.status !== "aguardando") {
           navigate(`/game/${gameId}/${g.status}`);
@@ -30,7 +30,7 @@ export default function Lobby() {
       if (!cancelled) setLoading(false);
     };
     load();
-    const unsub = base44.entities.Game.subscribe((event) => {
+    const unsub = db.entities.Game.subscribe((event) => {
       if (cancelled || !event.data || event.data.id !== gameId) return;
       setGame(event.data);
       if (event.data.status !== "aguardando") {

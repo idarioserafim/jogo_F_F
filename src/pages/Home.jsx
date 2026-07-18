@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spade, Plus, LogIn, History } from "lucide-react";
@@ -25,7 +25,7 @@ export default function Home() {
     setError("");
     try {
       const roomCode = generateRoomCode();
-      const game = await base44.entities.Game.create({
+      const game = await db.entities.Game.create({
         room_code: roomCode,
         host_user_id: playerId,
         players: [playerName],
@@ -53,7 +53,7 @@ export default function Home() {
     setJoining(true);
     setError("");
     try {
-      const games = await base44.entities.Game.filter({ room_code: roomCode });
+      const games = await db.entities.Game.filter({ room_code: roomCode });
       if (!games || games.length === 0) {
         setError("Sala não encontrada.");
         setJoining(false);
@@ -74,7 +74,7 @@ export default function Home() {
         setJoining(false);
         return;
       }
-      await base44.entities.Game.update(game.id, {
+      await db.entities.Game.update(game.id, {
         players: [...game.players, playerName],
         player_user_ids: [...(game.player_user_ids || []), playerId],
       });

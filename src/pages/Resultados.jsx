@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { getPlayerId } from "@/lib/localPlayer";
@@ -18,14 +18,14 @@ export default function Resultados() {
     let cancelled = false;
     const load = async () => {
       try {
-        const g = await base44.entities.Game.get(gameId);
+        const g = await db.entities.Game.get(gameId);
         if (cancelled) return;
         if (g.status === "palpites") { navigate(`/game/${gameId}/palpites`); return; }
         if (g.status === "mesa") { navigate(`/game/${gameId}/mesa`); return; }
         if (g.status === "finalizado") { navigate(`/game/${gameId}/placar`); return; }
         if (g.status === "aguardando") { navigate(`/game/${gameId}/lobby`); return; }
         setGame(g);
-        let allEntries = await base44.entities.RoundEntry.filter({
+        let allEntries = await db.entities.RoundEntry.filter({
           game_id: gameId, sub_round_number: g.current_sub_round,
         });
         allEntries.sort((a, b) => a.player_order - b.player_order);
@@ -38,7 +38,7 @@ export default function Resultados() {
             const points = resultado === e.palpite ? 0 : 1;
             return { id: e.id, resultado, points };
           });
-          await base44.entities.RoundEntry.bulkUpdate(updates);
+          await db.entities.RoundEntry.bulkUpdate(updates);
           allEntries = allEntries.map((e) => {
             const u = updates.find((u) => u.id === e.id);
             return { ...e, resultado: u.resultado, points: u.points };
@@ -51,7 +51,7 @@ export default function Resultados() {
       if (!cancelled) setLoading(false);
     };
     load();
-    const unsub = base44.entities.Game.subscribe((event) => {
+    const unsub = db.entities.Game.subscribe((event) => {
       if (cancelled || !event.data || event.data.id !== gameId) return;
       setGame(event.data);
     });

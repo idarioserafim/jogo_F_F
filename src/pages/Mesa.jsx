@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Crown } from "lucide-react";
 import CardView from "@/components/Card";
@@ -23,7 +23,7 @@ export default function Mesa() {
     let cancelled = false;
     const load = async () => {
       try {
-        const g = await base44.entities.Game.get(gameId);
+        const g = await db.entities.Game.get(gameId);
         if (cancelled) return;
         gameRef.current = g;
         if (g.status === "resultados") { navigate(`/game/${gameId}/resultados`); return; }
@@ -33,7 +33,7 @@ export default function Mesa() {
         setGame(g);
         const mySeat = (g.player_user_ids || []).indexOf(playerId);
         if (mySeat >= 0) {
-          const hands = await base44.entities.PlayerHand.filter({
+          const hands = await db.entities.PlayerHand.filter({
             game_id: gameId, player_user_id: playerId, sub_round_number: g.current_sub_round,
           });
           if (!cancelled && hands.length > 0) setHand(hands[0]);
@@ -43,7 +43,7 @@ export default function Mesa() {
     };
     load();
 
-    const unsubGame = base44.entities.Game.subscribe(async (event) => {
+    const unsubGame = db.entities.Game.subscribe(async (event) => {
       if (cancelled || !event.data || event.data.id !== gameId) return;
       const g = event.data;
       gameRef.current = g;
@@ -52,7 +52,7 @@ export default function Mesa() {
       // Refresh hand when trick clears (cards removed)
       const mySeat = (g.player_user_ids || []).indexOf(playerId);
       if (mySeat >= 0) {
-        const hands = await base44.entities.PlayerHand.filter({
+        const hands = await db.entities.PlayerHand.filter({
           game_id: gameId, player_user_id: playerId, sub_round_number: g.current_sub_round,
         });
         if (!cancelled && hands.length > 0) setHand(hands[0]);
@@ -85,6 +85,8 @@ export default function Mesa() {
   const isMyTurn = isPlayer && currentPlayerIndex === mySeat;
   const trick = game.current_trick || [];
   const trickWinner = game.trick_winner ?? -1;
+  const trickTied = game.trick_tied ?? false;
+  const deadPile = game.dead_pile || [];
   const tricksWon = game.tricks_won || [];
   const vira = game.vira;
   const trickNumber = game.trick_number || 0;
@@ -98,7 +100,7 @@ export default function Mesa() {
     const newCards = hand.cards.filter((_, i) => i !== cardIndex);
     setPlaying(true);
     try {
-      await base44.entities.PlayerHand.update(hand.id, { cards: newCards });
+      await db.entities.PlayerHand.update(hand.id, { cards: newCards });
       setHand({ ...hand, cards: newCards });
 
       const myPos = activeOrders.indexOf(mySeat);
@@ -106,37 +108,76 @@ export default function Mesa() {
       const newTrick = [...trick, { player_order: mySeat, card }];
 
       if (isLastPlay) {
-        const winner = determineTrickWinner(newTrick, vira);
-        const newTricksWon = tricksWon.map((v, i) => (i === winner ? v + 1 : v));
+        const result = determineTrickWinner(newTrick, vira);
         const newTrickNumber = trickNumber + 1;
-        if (newTrickNumber >= cardsPerPlayer) {
-          await base44.entities.Game.update(gameId, {
-            current_trick: newTrick,
-            tricks_won: newTricksWon,
-            trick_number: newTrickNumber,
-            trick_winner: winner,
-            status: "resultados",
-          });
+        const isHandOver = newTrickNumber >= cardsPerPlayer;
+
+        if (result.tie) {
+          // Empate: ninguém ganha a vaza, as cartas vão pro morto e
+          // quem empatou primeiro é quem sai jogando na próxima vaza.
+          const newDeadPile = [...(game.dead_pile || []), ...newTrick.map((p) => p.card)];
+          if (isHandOver) {
+            await db.entities.Game.update(gameId, {
+              current_trick: newTrick,
+              trick_number: newTrickNumber,
+              trick_winner: -1,
+              trick_tied: true,
+              dead_pile: newDeadPile,
+              status: "resultados",
+            });
+          } else {
+            await db.entities.Game.update(gameId, {
+              current_trick: newTrick,
+              trick_number: newTrickNumber,
+              trick_winner: -1,
+              trick_tied: true,
+              dead_pile: newDeadPile,
+            });
+            setTimeout(async () => {
+              try {
+                await db.entities.Game.update(gameId, {
+                  current_trick: [],
+                  trick_winner: -1,
+                  trick_tied: false,
+                  current_player_index: result.firstTied,
+                });
+              } catch (e) {}
+            }, 3000);
+          }
         } else {
-          await base44.entities.Game.update(gameId, {
-            current_trick: newTrick,
-            tricks_won: newTricksWon,
-            trick_number: newTrickNumber,
-            trick_winner: winner,
-          });
-          setTimeout(async () => {
-            try {
-              await base44.entities.Game.update(gameId, {
-                current_trick: [],
-                trick_winner: -1,
-                current_player_index: activeOrders[0],
-              });
-            } catch (e) {}
-          }, 3000);
+          const winner = result.winner;
+          const newTricksWon = tricksWon.map((v, i) => (i === winner ? v + 1 : v));
+          if (isHandOver) {
+            await db.entities.Game.update(gameId, {
+              current_trick: newTrick,
+              tricks_won: newTricksWon,
+              trick_number: newTrickNumber,
+              trick_winner: winner,
+              trick_tied: false,
+              status: "resultados",
+            });
+          } else {
+            await db.entities.Game.update(gameId, {
+              current_trick: newTrick,
+              tricks_won: newTricksWon,
+              trick_number: newTrickNumber,
+              trick_winner: winner,
+              trick_tied: false,
+            });
+            setTimeout(async () => {
+              try {
+                await db.entities.Game.update(gameId, {
+                  current_trick: [],
+                  trick_winner: -1,
+                  current_player_index: winner,
+                });
+              } catch (e) {}
+            }, 3000);
+          }
         }
       } else {
         const nextPlayer = activeOrders[myPos + 1];
-        await base44.entities.Game.update(gameId, {
+        await db.entities.Game.update(gameId, {
           current_trick: newTrick,
           current_player_index: nextPlayer,
         });
@@ -166,10 +207,10 @@ export default function Mesa() {
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500 uppercase tracking-wider">Vira</span>
             <CardView card={vira} size="sm" disabled />
-            {(game.deck || []).length > 0 && (
+            {((game.deck || []).length > 0 || deadPile.length > 0) && (
               <div className="flex items-center gap-1 ml-2">
-                <span className="text-xs text-slate-500">Morto</span>
-                {Array.from({ length: Math.min((game.deck || []).length, 3) }).map((_, i) => (
+                <span className="text-xs text-slate-500">Morto{deadPile.length > 0 ? ` (${deadPile.length})` : ""}</span>
+                {Array.from({ length: Math.min((game.deck || []).length + deadPile.length, 3) }).map((_, i) => (
                   <CardView key={i} hidden size="sm" />
                 ))}
               </div>
@@ -187,7 +228,12 @@ export default function Mesa() {
 
         {/* Current trick */}
         <div className="bg-slate-900/30 border border-slate-800/50 rounded-xl p-4 mb-4 min-h-32 flex flex-col items-center justify-center">
-          {trickComplete && trickWinner >= 0 ? (
+          {trickComplete && trickTied ? (
+            <div className="text-center">
+              <p className="text-slate-300 font-semibold text-sm">Empate! As cartas foram para o morto.</p>
+              <p className="text-slate-500 text-xs mt-1">Ninguém perde ponto nesta vaza.</p>
+            </div>
+          ) : trickComplete && trickWinner >= 0 ? (
             <div className="text-center">
               <Crown className="w-6 h-6 text-amber-500 mx-auto mb-1" />
               <p className="text-amber-500 font-semibold text-sm">{game.players[trickWinner]} ganhou a vaza!</p>

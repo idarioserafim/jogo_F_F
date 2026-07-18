@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Check, Clock } from "lucide-react";
@@ -25,7 +25,7 @@ export default function Palpites() {
     let cancelled = false;
     const load = async () => {
       try {
-        const g = await base44.entities.Game.get(gameId);
+        const g = await db.entities.Game.get(gameId);
         if (cancelled) return;
         gameRef.current = g;
         if (g.status === "mesa") { navigate(`/game/${gameId}/mesa`); return; }
@@ -35,12 +35,12 @@ export default function Palpites() {
         setGame(g);
         const mySeat = (g.player_user_ids || []).indexOf(playerId);
         if (mySeat >= 0) {
-          const hands = await base44.entities.PlayerHand.filter({
+          const hands = await db.entities.PlayerHand.filter({
             game_id: gameId, player_user_id: playerId, sub_round_number: g.current_sub_round,
           });
           if (!cancelled && hands.length > 0) setHand(hands[0]);
         }
-        const allEntries = await base44.entities.RoundEntry.filter({
+        const allEntries = await db.entities.RoundEntry.filter({
           game_id: gameId, sub_round_number: g.current_sub_round,
         });
         if (cancelled) return;
@@ -52,22 +52,22 @@ export default function Palpites() {
     };
     load();
 
-    const unsubGame = base44.entities.Game.subscribe(async (event) => {
+    const unsubGame = db.entities.Game.subscribe(async (event) => {
       if (cancelled || !event.data || event.data.id !== gameId) return;
       const g = event.data;
       gameRef.current = g;
       setGame(g);
       if (g.status === "mesa") { navigate(`/game/${gameId}/mesa`); return; }
-      const allEntries = await base44.entities.RoundEntry.filter({
+      const allEntries = await db.entities.RoundEntry.filter({
         game_id: gameId, sub_round_number: g.current_sub_round,
       });
       if (!cancelled) setEntries(allEntries);
     });
-    const unsubEntries = base44.entities.RoundEntry.subscribe(async () => {
+    const unsubEntries = db.entities.RoundEntry.subscribe(async () => {
       if (cancelled) return;
       const subRound = gameRef.current?.current_sub_round;
       if (subRound == null) return;
-      const allEntries = await base44.entities.RoundEntry.filter({
+      const allEntries = await db.entities.RoundEntry.filter({
         game_id: gameId, sub_round_number: subRound,
       });
       if (!cancelled) setEntries(allEntries);
@@ -85,7 +85,7 @@ export default function Palpites() {
       const active = getActivePlayerOrders(game);
       const allIn = active.every((order) => entries.some((e) => e.player_order === order));
       if (allIn) {
-        base44.entities.Game.update(gameId, {
+        db.entities.Game.update(gameId, {
           status: "mesa",
           current_player_index: active[0],
           current_trick: [],
@@ -136,9 +136,9 @@ export default function Palpites() {
     setSaving(true);
     try {
       if (myEntry) {
-        await base44.entities.RoundEntry.update(myEntry.id, { palpite: bet });
+        await db.entities.RoundEntry.update(myEntry.id, { palpite: bet });
       } else {
-        await base44.entities.RoundEntry.create({
+        await db.entities.RoundEntry.create({
           game_id: gameId,
           sub_round_number: game.current_sub_round,
           player_name: game.players[mySeat],
@@ -148,13 +148,13 @@ export default function Palpites() {
           points: 0,
         });
       }
-      const allEntries = await base44.entities.RoundEntry.filter({
+      const allEntries = await db.entities.RoundEntry.filter({
         game_id: gameId, sub_round_number: game.current_sub_round,
       });
       setEntries(allEntries);
       const allIn = activeOrders.every((order) => allEntries.some((e) => e.player_order === order));
       if (allIn) {
-        await base44.entities.Game.update(gameId, {
+        await db.entities.Game.update(gameId, {
           status: "mesa",
           current_player_index: activeOrders[0],
           current_trick: [],
