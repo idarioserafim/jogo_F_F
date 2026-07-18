@@ -1,4 +1,4 @@
-const { Server } = require("socket.io");
+import { Server } from "socket.io";
 
 // Cria o servidor de Socket na porta 3000
 const io = new Server(3000, {
