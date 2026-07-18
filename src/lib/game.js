@@ -23,6 +23,19 @@ export function getActivePlayerOrders(game) {
   return orders;
 }
 
+// A ordem fixa (getActivePlayerOrders) sempre começa depois do "pé" e não
+// muda durante a mão — mas quem LIDERA cada vaza pode mudar (quem ganhou a
+// vaza anterior, ou quem empatou primeiro, sai jogando na próxima). Esta
+// função gira a ordem fixa para começar em quem está liderando a vaza atual,
+// pra saber corretamente quem joga em seguida e quem fecha a vaza.
+export function getTrickPlayOrder(game, activeOrders) {
+  const trick = game.current_trick || [];
+  const leaderSeat = trick.length > 0 ? trick[0].player_order : (game.current_player_index ?? activeOrders[0]);
+  const leaderPos = activeOrders.indexOf(leaderSeat);
+  if (leaderPos === -1) return activeOrders;
+  return [...activeOrders.slice(leaderPos), ...activeOrders.slice(0, leaderPos)];
+}
+
 // Retorna o resultado de uma vaza.
 // - Se um jogador venceu: { winner: <player_order>, tie: false }
 // - Se empatou (duas ou mais cartas de maior força iguais, ninguém bateu):

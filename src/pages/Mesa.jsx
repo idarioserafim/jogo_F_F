@@ -4,7 +4,7 @@ import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Crown } from "lucide-react";
 import CardView from "@/components/Card";
-import { getActivePlayerOrders, determineTrickWinner } from "@/lib/game";
+import { getActivePlayerOrders, getTrickPlayOrder, determineTrickWinner } from "@/lib/game";
 import { calcCardsPerPlayer } from "@/lib/game";
 import { sortHand } from "@/lib/cards";
 import { getPlayerId } from "@/lib/localPlayer";
@@ -103,8 +103,9 @@ export default function Mesa() {
       await db.entities.PlayerHand.update(hand.id, { cards: newCards });
       setHand({ ...hand, cards: newCards });
 
-      const myPos = activeOrders.indexOf(mySeat);
-      const isLastPlay = myPos === activeOrders.length - 1;
+      const trickOrder = getTrickPlayOrder(game, activeOrders);
+      const myPos = trickOrder.indexOf(mySeat);
+      const isLastPlay = myPos === trickOrder.length - 1;
       const newTrick = [...trick, { player_order: mySeat, card }];
 
       if (isLastPlay) {
@@ -176,7 +177,7 @@ export default function Mesa() {
           }
         }
       } else {
-        const nextPlayer = activeOrders[myPos + 1];
+        const nextPlayer = trickOrder[myPos + 1];
         await db.entities.Game.update(gameId, {
           current_trick: newTrick,
           current_player_index: nextPlayer,
