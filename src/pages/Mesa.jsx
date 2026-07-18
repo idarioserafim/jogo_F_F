@@ -4,7 +4,7 @@ import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Crown } from "lucide-react";
 import CardView from "@/components/Card";
-import { getActivePlayerOrders, getTrickPlayOrder, determineTrickWinner } from "@/lib/game";
+import { getActivePlayerOrders, getTrickPlayOrder, determineTrickWinner, leaveGame } from "@/lib/game";
 import { calcCardsPerPlayer } from "@/lib/game";
 import { sortHand } from "@/lib/cards";
 import { getPlayerId } from "@/lib/localPlayer";
@@ -17,6 +17,7 @@ export default function Mesa() {
   const [hand, setHand] = useState(null);
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const gameRef = useRef(null);
 
   useEffect(() => {
@@ -187,6 +188,14 @@ export default function Mesa() {
     setPlaying(false);
   };
 
+  const leaveRoom = async () => {
+    setLeaving(true);
+    try {
+      await leaveGame(gameId, game, playerId);
+    } catch (e) {}
+    navigate("/");
+  };
+
   return (
     <div
       className="min-h-screen bg-slate-950 app-pad"
@@ -207,7 +216,7 @@ export default function Mesa() {
         <div className="flex items-center justify-between mb-4 bg-slate-900/40 border border-slate-800 rounded-xl p-3">
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500 uppercase tracking-wider">Vira</span>
-            <CardView card={vira} size="sm" disabled />
+            <CardView card={vira} size="md" disabled />
             {((game.deck || []).length > 0 || deadPile.length > 0) && (
               <div className="flex items-center gap-1 ml-2">
                 <span className="text-xs text-slate-500">Morto{deadPile.length > 0 ? ` (${deadPile.length})` : ""}</span>
@@ -227,32 +236,49 @@ export default function Mesa() {
           </div>
         </div>
 
-        {/* Current trick */}
-        <div className="bg-slate-900/30 border border-slate-800/50 rounded-xl p-4 mb-4 min-h-32 flex flex-col items-center justify-center">
-          {trickComplete && trickTied ? (
-            <div className="text-center">
-              <p className="text-slate-300 font-semibold text-sm">Empate! As cartas foram para o morto.</p>
-              <p className="text-slate-500 text-xs mt-1">Ninguém perde ponto nesta vaza.</p>
-            </div>
-          ) : trickComplete && trickWinner >= 0 ? (
-            <div className="text-center">
-              <Crown className="w-6 h-6 text-amber-500 mx-auto mb-1" />
-              <p className="text-amber-500 font-semibold text-sm">{game.players[trickWinner]} ganhou a vaza!</p>
-            </div>
-          ) : trick.length === 0 ? (
-            <p className="text-slate-600 text-sm">
-              {isMyTurn ? "Sua vez — escolha uma carta" : `Vez de ${game.players[currentPlayerIndex]}`}
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2 justify-center">
-              {trick.map((play, i) => (
-                <div key={i} className="flex flex-col items-center gap-1">
-                  <span className="text-[10px] text-slate-500">{game.players[play.player_order]}</span>
-                  <CardView card={play.card} size="sm" disabled />
-                </div>
-              ))}
+        {/* Current trick — cada jogador tem um lugar fixo, que só se preenche
+            quando ele joga. Assim o layout não pula/embaralha a cada jogada. */}
+        <div className="bg-slate-900/30 border border-slate-800/50 rounded-xl p-4 mb-4">
+          {trickComplete && (
+            <div className="text-center mb-3 pb-3 border-b border-slate-800/50">
+              {trickTied ? (
+                <>
+                  <p className="text-slate-300 font-semibold text-sm">Empate! As cartas foram para o morto.</p>
+                  <p className="text-slate-500 text-xs mt-1">Ninguém perde ponto nesta vaza.</p>
+                </>
+              ) : trickWinner >= 0 ? (
+                <>
+                  <Crown className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+                  <p className="text-amber-500 font-semibold text-sm">{game.players[trickWinner]} ganhou a vaza!</p>
+                </>
+              ) : null}
             </div>
           )}
+
+          <div className="grid grid-cols-3 gap-3 justify-items-center">
+            {activeOrders.map((order) => {
+              const play = trick.find((p) => p.player_order === order);
+              const isNext = !trickComplete && order === currentPlayerIndex;
+              return (
+                <div key={order} className="flex flex-col items-center gap-1">
+                  <span className={`text-xs truncate max-w-[4.5rem] ${isNext ? "text-amber-500 font-semibold" : "text-slate-500"}`}>
+                    {game.players[order]}
+                  </span>
+                  {play ? (
+                    <CardView card={play.card} size="lg" disabled />
+                  ) : (
+                    <div
+                      className={`w-[4.5rem] h-[6.5rem] rounded-lg border-2 border-dashed flex items-center justify-center ${
+                        isNext ? "border-amber-500/50" : "border-slate-800"
+                      }`}
+                    >
+                      {isNext && <span className="text-amber-500/70 text-lg">…</span>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Whose turn indicator */}
@@ -288,6 +314,16 @@ export default function Mesa() {
 
         {!isPlayer && (
           <p className="text-center text-slate-500 text-sm">Você é espectador</p>
+        )}
+
+        {isPlayer && (
+          <button
+            onClick={leaveRoom}
+            disabled={leaving}
+            className="w-full mt-6 text-center text-slate-500 hover:text-red-400 text-sm py-2 transition-colors"
+          >
+            {leaving ? "Saindo..." : "Sair da sala"}
+          </button>
         )}
       </div>
     </div>

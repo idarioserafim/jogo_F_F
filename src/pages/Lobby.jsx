@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Copy, Check, Users, Play } from "lucide-react";
-import { dealRound } from "@/lib/game";
+import { dealRound, leaveLobby } from "@/lib/game";
 import { getPlayerId } from "@/lib/localPlayer";
 
 export default function Lobby() {
@@ -14,6 +14,7 @@ export default function Lobby() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +59,15 @@ export default function Lobby() {
     } catch (e) {
       setStarting(false);
     }
+  };
+
+  const leaveRoom = async () => {
+    if (!game) return;
+    setLeaving(true);
+    try {
+      await leaveLobby(gameId, game, playerId);
+    } catch (e) {}
+    navigate("/");
   };
 
   if (loading) {
@@ -114,7 +124,7 @@ export default function Lobby() {
                   {i + 1}
                 </div>
                 <span className="text-white font-medium flex-1 truncate">{name}</span>
-                {i === 0 && (
+                {(game.player_user_ids || [])[i] === game.host_user_id && (
                   <span className="text-[10px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-bold uppercase shrink-0">
                     Anfitrião
                   </span>
@@ -142,6 +152,14 @@ export default function Lobby() {
             Aguardando o anfitrião iniciar o jogo...
           </div>
         )}
+
+        <button
+          onClick={leaveRoom}
+          disabled={leaving}
+          className="w-full mt-3 text-center text-slate-500 hover:text-red-400 text-sm py-2 transition-colors"
+        >
+          {leaving ? "Saindo..." : "Sair da sala"}
+        </button>
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Check, Clock } from "lucide-react";
 import CardView from "@/components/Card";
-import { getActivePlayerOrders, calcCardsPerPlayer } from "@/lib/game";
+import { getActivePlayerOrders, calcCardsPerPlayer, leaveGame } from "@/lib/game";
 import { sortHand } from "@/lib/cards";
 import { getPlayerId } from "@/lib/localPlayer";
 
@@ -19,6 +19,7 @@ export default function Palpites() {
   const [myBet, setMyBet] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const gameRef = useRef(null);
 
   useEffect(() => {
@@ -169,6 +170,14 @@ export default function Palpites() {
   const vira = game.vira;
   const isMyBetValid = myBet !== "" && !isNaN(Number(myBet)) && Number(myBet) >= 0 && Number(myBet) <= cardsPerPlayer && !(isPe && Number(myBet) === forbiddenBet);
 
+  const leaveRoom = async () => {
+    setLeaving(true);
+    try {
+      await leaveGame(gameId, game, playerId);
+    } catch (e) {}
+    navigate("/");
+  };
+
   return (
     <div
       className="min-h-screen bg-slate-950 app-pad"
@@ -291,6 +300,16 @@ export default function Palpites() {
 
         {!isPlayer && (
           <p className="text-center text-slate-500 text-sm mt-6">Você é espectador</p>
+        )}
+
+        {isPlayer && (
+          <button
+            onClick={leaveRoom}
+            disabled={leaving}
+            className="w-full mt-6 text-center text-slate-500 hover:text-red-400 text-sm py-2 transition-colors"
+          >
+            {leaving ? "Saindo..." : "Sair da sala"}
+          </button>
         )}
       </div>
     </div>

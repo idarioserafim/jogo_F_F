@@ -10,6 +10,73 @@ export function generateRoomCode() {
   return code;
 }
 
+// Escolhe o próximo anfitrião entre os jogadores ainda ativos (não
+// abandonados), na ordem dos assentos. Retorna null se não sobrar ninguém.
+function pickNextHost(game, leavingSeat, newAbandoned) {
+  const ids = game.player_user_ids || [];
+  for (let i = 1; i <= game.players.length; i++) {
+    const idx = (leavingSeat + i) % game.players.length;
+    if (idx === leavingSeat) continue;
+    if (!newAbandoned.includes(game.players[idx]) && ids[idx]) {
+      return ids[idx];
+    }
+  }
+  return null;
+}
+
+// Sair de uma sala ainda na sala de espera (antes do jogo começar): como
+// ninguém ainda tem mão/palpite registrado, o jogador é removido de vez das
+// listas, em vez de só marcado como "abandonou".
+export async function leaveLobby(gameId, game, playerId) {
+  const seat = (game.player_user_ids || []).indexOf(playerId);
+  if (seat < 0) return;
+
+  const newPlayers = game.players.filter((_, i) => i !== seat);
+  const newIds = (game.player_user_ids || []).filter((_, i) => i !== seat);
+  const patch = { players: newPlayers, player_user_ids: newIds };
+
+  if (game.host_user_id === playerId) {
+    patch.host_user_id = newIds[0] || null;
+  }
+
+  await db.entities.Game.update(gameId, patch);
+}
+
+// Sair de uma partida já em andamento: mantém o nome do jogador no placar
+// (marcado como "abandonou"), transfere a responsabilidade de anfitrião se
+// necessário, e — se era a vez dele jogar uma carta na mesa — passa a vez
+// para o próximo jogador ativo.
+export async function leaveGame(gameId, game, playerId) {
+  const seat = (game.player_user_ids || []).indexOf(playerId);
+  if (seat < 0) return;
+  const name = game.players[seat];
+  const abandoned = game.abandoned_players || [];
+  if (abandoned.includes(name)) return;
+  const newAbandoned = [...abandoned, name];
+  const patch = { abandoned_players: newAbandoned };
+
+  if (game.host_user_id === playerId) {
+    patch.host_user_id = pickNextHost(game, seat, newAbandoned);
+  }
+
+  if (game.status === "mesa" && (game.current_player_index ?? -1) === seat) {
+    const oldActiveOrders = getActivePlayerOrders(game);
+    const oldTrickOrder = getTrickPlayOrder(game, oldActiveOrders);
+    const myPos = oldTrickOrder.indexOf(seat);
+    if (myPos >= 0 && oldTrickOrder.length > 1) {
+      for (let i = 1; i <= oldTrickOrder.length; i++) {
+        const candidate = oldTrickOrder[(myPos + i) % oldTrickOrder.length];
+        if (candidate !== seat && !newAbandoned.includes(game.players[candidate])) {
+          patch.current_player_index = candidate;
+          break;
+        }
+      }
+    }
+  }
+
+  await db.entities.Game.update(gameId, patch);
+}
+
 export function getActivePlayerOrders(game) {
   const abandoned = game.abandoned_players || [];
   const peIndex = game.current_pe_index ?? 0;

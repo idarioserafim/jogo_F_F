@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { Trophy, RotateCcw, ArrowRight, ChevronDown, ChevronRight, LogOut, Crown, History } from "lucide-react";
-import { dealRound } from "@/lib/game";
+import { dealRound, leaveGame } from "@/lib/game";
 import { getPlayerId } from "@/lib/localPlayer";
 
 export default function Placar() {
@@ -17,6 +17,7 @@ export default function Placar() {
   const [expandedRound, setExpandedRound] = useState(null);
   const [ending, setEnding] = useState(false);
   const [advancing, setAdvancing] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +73,15 @@ export default function Placar() {
     } catch (e) {
       setAdvancing(false);
     }
+  };
+
+  const leaveRoom = async () => {
+    if (!game) return;
+    setLeaving(true);
+    try {
+      await leaveGame(gameId, game, playerId);
+    } catch (e) {}
+    navigate("/");
   };
 
   if (loading) {
@@ -167,7 +177,7 @@ export default function Placar() {
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className={`font-medium truncate ${player.isAbandoned ? "text-slate-500" : "text-white"}`}>
+                    <span className={`font-medium truncate ${player.isAbandoned ? "text-slate-500 line-through decoration-slate-600" : "text-white"}`}>
                       {player.name}
                     </span>
                     {player.isAbandoned && (
@@ -269,6 +279,13 @@ export default function Placar() {
                 Aguardando o anfitrião iniciar a próxima rodada...
               </div>
             )}
+            <button
+              onClick={leaveRoom}
+              disabled={leaving}
+              className="w-full mt-3 text-center text-slate-500 hover:text-red-400 text-sm py-2 transition-colors"
+            >
+              {leaving ? "Saindo..." : "Sair da sala"}
+            </button>
           </>
         ) : (
           <Button
