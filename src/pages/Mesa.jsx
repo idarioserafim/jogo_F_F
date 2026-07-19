@@ -218,10 +218,10 @@ export default function Mesa() {
         </div>
 
         {/* Vira + morto + tricks won */}
-        <div className="flex items-center justify-between mb-4 bg-slate-900/40 border border-slate-800 rounded-xl p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-slate-900/40 border border-slate-800 rounded-xl p-3">
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500 uppercase tracking-wider">Vira</span>
-            <CardView card={vira} size="md" disabled />
+            <CardView card={vira} size="lg" disabled />
             {((game.deck || []).length > 0 || deadPile.length > 0) && (
               <div className="flex items-center gap-1 ml-2">
                 <span className="text-xs text-slate-500">Morto{deadPile.length > 0 ? ` (${deadPile.length})` : ""}</span>

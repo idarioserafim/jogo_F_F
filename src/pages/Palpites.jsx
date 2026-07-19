@@ -208,7 +208,7 @@ export default function Palpites() {
             <div className="text-right">
               <p className="text-xs text-slate-500 uppercase tracking-wider">Vira</p>
             </div>
-            <CardView card={vira} size="md" disabled />
+            <CardView card={vira} size="lg" disabled />
           </div>
         )}
 
