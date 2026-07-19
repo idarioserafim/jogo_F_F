@@ -1,5 +1,5 @@
 export const SUITS = ["ouro", "espada", "copa", "zap"];
-export const RANKS = ["4", "5", "6", "7", "J", "Q", "K", "A", "2", "3"];
+export const RANKS = ["4", "5", "6", "7", "Q", "J", "K", "A", "2", "3"];
 
 const RANK_ORDER = {};
 RANKS.forEach((r, i) => { RANK_ORDER[r] = i; });
