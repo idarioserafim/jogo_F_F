@@ -219,7 +219,7 @@ export default function Palpites() {
             <div className="flex flex-wrap gap-2 justify-center bg-slate-900/30 rounded-xl p-4 border border-slate-800/50">
               {hand.cards.length > 0 ? (
                 sortHand(hand.cards, vira).map((card, i) => (
-                  <CardView key={i} card={card} size="md" disabled />
+                  <CardView key={i} card={card} size="lg" disabled />
                 ))
               ) : (
                 <p className="text-slate-600 text-sm py-4">Sem cartas</p>

@@ -15,6 +15,7 @@ export default function Mesa() {
   const playerId = getPlayerId();
   const [game, setGame] = useState(null);
   const [hand, setHand] = useState(null);
+  const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -39,6 +40,10 @@ export default function Mesa() {
           });
           if (!cancelled && hands.length > 0) setHand(hands[0]);
         }
+        const allEntries = await db.entities.RoundEntry.filter({
+          game_id: gameId, sub_round_number: g.current_sub_round,
+        });
+        if (!cancelled) setEntries(allEntries);
       } catch (e) {}
       if (!cancelled) setLoading(false);
     };
@@ -227,12 +232,18 @@ export default function Mesa() {
             )}
           </div>
           <div className="flex gap-2 flex-wrap justify-end">
-            {activeOrders.map((order) => (
-              <div key={order} className="text-center">
-                <p className="text-[10px] text-slate-500 truncate max-w-16">{game.players[order]}</p>
-                <p className="text-sm font-bold text-amber-500 tabular-nums">{tricksWon[order] || 0}</p>
-              </div>
-            ))}
+            {activeOrders.map((order) => {
+              const entry = entries.find((e) => e.player_order === order);
+              return (
+                <div key={order} className="text-center">
+                  <p className="text-[10px] text-slate-500 truncate max-w-16">{game.players[order]}</p>
+                  <p className="text-sm font-bold text-amber-500 tabular-nums">
+                    {tricksWon[order] || 0}
+                    <span className="text-slate-600">/{entry ? entry.palpite : "?"}</span>
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
 
