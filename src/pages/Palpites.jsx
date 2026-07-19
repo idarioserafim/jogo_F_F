@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Check, Clock } from "lucide-react";
 import CardView from "@/components/Card";
-import { getActivePlayerOrders, calcCardsPerPlayer, leaveGame } from "@/lib/game";
+import { getActivePlayerOrders, calcCardsPerPlayer, leaveGame, findNewlyAbandoned } from "@/lib/game";
 import { sortHand } from "@/lib/cards";
 import { getPlayerId } from "@/lib/localPlayer";
+import LeaveToast from "@/components/LeaveToast";
 
 export default function Palpites() {
   const { gameId } = useParams();
@@ -20,6 +21,7 @@ export default function Palpites() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [leaveToast, setLeaveToast] = useState("");
   const gameRef = useRef(null);
 
   useEffect(() => {
@@ -56,6 +58,10 @@ export default function Palpites() {
     const unsubGame = db.entities.Game.subscribe(async (event) => {
       if (cancelled || !event.data || event.data.id !== gameId) return;
       const g = event.data;
+      const newlyAbandoned = findNewlyAbandoned(gameRef.current, g);
+      if (newlyAbandoned.length > 0) {
+        setLeaveToast(`${newlyAbandoned.join(", ")} saiu da sala.`);
+      }
       gameRef.current = g;
       setGame(g);
       if (g.status === "mesa") { navigate(`/game/${gameId}/mesa`); return; }
@@ -122,7 +128,6 @@ export default function Palpites() {
   const peIndex = game.current_pe_index ?? 0;
   const isPe = mySeat === peIndex;
   const cardsPerPlayer = game.cards_per_player || 1;
-
   const totalBets = entries
     .filter((e) => e.player_order !== peIndex)
     .reduce((s, e) => s + (e.palpite || 0), 0);
@@ -132,8 +137,8 @@ export default function Palpites() {
   const submitBet = async () => {
     const bet = Number(myBet);
     if (myBet === "" || isNaN(bet)) return;
+    if (bet < 0) return;
     if (isPe && bet === forbiddenBet) return;
-    if (bet < 0 || bet > cardsPerPlayer) return;
     setSaving(true);
     try {
       if (myEntry) {
@@ -168,7 +173,7 @@ export default function Palpites() {
   };
 
   const vira = game.vira;
-  const isMyBetValid = myBet !== "" && !isNaN(Number(myBet)) && Number(myBet) >= 0 && Number(myBet) <= cardsPerPlayer && !(isPe && Number(myBet) === forbiddenBet);
+  const isMyBetValid = myBet !== "" && !isNaN(Number(myBet)) && Number(myBet) >= 0 && !(isPe && Number(myBet) === forbiddenBet);
 
   const leaveRoom = async () => {
     setLeaving(true);
@@ -183,6 +188,7 @@ export default function Palpites() {
       className="min-h-screen bg-slate-950 app-pad"
       style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.06), transparent 55%)" }}
     >
+      <LeaveToast message={leaveToast} onDone={() => setLeaveToast("")} />
       <div className="max-w-md mx-auto pt-10 pb-16">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => navigate("/")} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors">
@@ -249,7 +255,7 @@ export default function Palpites() {
                         Pé
                       </span>
                     )}
-                    {isPe && (
+                    {isPe && forbiddenBet !== null && forbiddenBet >= 0 && (
                       <p className="text-xs text-red-400 mt-1">Não pode apostar {forbiddenBet}</p>
                     )}
                   </div>
@@ -257,7 +263,6 @@ export default function Palpites() {
                     <Input
                       type="number"
                       min="0"
-                      max={cardsPerPlayer}
                       value={myBet}
                       onChange={(e) => setMyBet(e.target.value)}
                       placeholder="0"

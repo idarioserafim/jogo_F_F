@@ -4,10 +4,11 @@ import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Crown } from "lucide-react";
 import CardView from "@/components/Card";
-import { getActivePlayerOrders, getTrickPlayOrder, determineTrickWinner, leaveGame } from "@/lib/game";
+import { getActivePlayerOrders, getTrickPlayOrder, determineTrickWinner, leaveGame, findNewlyAbandoned } from "@/lib/game";
 import { calcCardsPerPlayer } from "@/lib/game";
 import { sortHand } from "@/lib/cards";
 import { getPlayerId } from "@/lib/localPlayer";
+import LeaveToast from "@/components/LeaveToast";
 
 export default function Mesa() {
   const { gameId } = useParams();
@@ -19,6 +20,7 @@ export default function Mesa() {
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [leaveToast, setLeaveToast] = useState("");
   const gameRef = useRef(null);
 
   useEffect(() => {
@@ -52,6 +54,10 @@ export default function Mesa() {
     const unsubGame = db.entities.Game.subscribe(async (event) => {
       if (cancelled || !event.data || event.data.id !== gameId) return;
       const g = event.data;
+      const newlyAbandoned = findNewlyAbandoned(gameRef.current, g);
+      if (newlyAbandoned.length > 0) {
+        setLeaveToast(`${newlyAbandoned.join(", ")} saiu da sala.`);
+      }
       gameRef.current = g;
       setGame(g);
       if (g.status === "resultados") { navigate(`/game/${gameId}/resultados`); return; }
@@ -206,6 +212,7 @@ export default function Mesa() {
       className="min-h-screen bg-slate-950 app-pad"
       style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.06), transparent 55%)" }}
     >
+      <LeaveToast message={leaveToast} onDone={() => setLeaveToast("")} />
       <div className="max-w-md mx-auto pt-10 pb-20">
         <div className="flex items-center gap-3 mb-4">
           <button onClick={() => navigate("/")} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors">

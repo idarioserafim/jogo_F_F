@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { Trophy, RotateCcw, ArrowRight, ChevronDown, ChevronRight, LogOut, Crown, History } from "lucide-react";
-import { dealRound, leaveGame } from "@/lib/game";
+import { dealRound, leaveGame, findNewlyAbandoned } from "@/lib/game";
 import { getPlayerId } from "@/lib/localPlayer";
+import LeaveToast from "@/components/LeaveToast";
 
 export default function Placar() {
   const { gameId } = useParams();
@@ -18,6 +19,8 @@ export default function Placar() {
   const [ending, setEnding] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [leaveToast, setLeaveToast] = useState("");
+  const gameRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,6 +31,7 @@ export default function Placar() {
         if (g.status === "palpites") { navigate(`/game/${gameId}/palpites`); return; }
         if (g.status === "mesa") { navigate(`/game/${gameId}/mesa`); return; }
         if (g.status === "aguardando") { navigate(`/game/${gameId}/lobby`); return; }
+        gameRef.current = g;
         setGame(g);
         const allEntries = await db.entities.RoundEntry.filter({ game_id: gameId });
         if (cancelled) return;
@@ -41,6 +45,11 @@ export default function Placar() {
     const unsub = db.entities.Game.subscribe((event) => {
       if (cancelled || !event.data || event.data.id !== gameId) return;
       const g = event.data;
+      const newlyAbandoned = findNewlyAbandoned(gameRef.current, g);
+      if (newlyAbandoned.length > 0) {
+        setLeaveToast(`${newlyAbandoned.join(", ")} saiu da sala.`);
+      }
+      gameRef.current = g;
       setGame(g);
       // Mesma lógica do carregamento inicial: se o anfitrião iniciou a
       // próxima rodada, todo mundo precisa ser levado pra tela de palpites.
@@ -129,6 +138,7 @@ export default function Placar() {
       className="min-h-screen bg-slate-950 app-pad"
       style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.06), transparent 55%)" }}
     >
+      <LeaveToast message={leaveToast} onDone={() => setLeaveToast("")} />
       <div className="max-w-md mx-auto pt-10 pb-16">
         {isFinished && activeStandings[0] && (
           <div className="mb-6 p-5 rounded-2xl bg-amber-500/10 border border-amber-500/40 text-center">

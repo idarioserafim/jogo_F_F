@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ArrowLeft, Copy, Check, Users, Play } from "lucide-react";
-import { dealRound, leaveLobby, calcCardsPerPlayer } from "@/lib/game";
+import { dealRound, leaveLobby, calcCardsPerPlayer, findRemovedLobbyPlayers } from "@/lib/game";
 import { getPlayerId } from "@/lib/localPlayer";
+import LeaveToast from "@/components/LeaveToast";
 
 export default function Lobby() {
   const { gameId } = useParams();
@@ -16,6 +18,8 @@ export default function Lobby() {
   const [copied, setCopied] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [cardsWarning, setCardsWarning] = useState("");
+  const [leaveToast, setLeaveToast] = useState("");
+  const gameRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,6 +31,7 @@ export default function Lobby() {
           navigate(`/game/${gameId}/${g.status}`);
           return;
         }
+        gameRef.current = g;
         setGame(g);
       } catch (e) {}
       if (!cancelled) setLoading(false);
@@ -34,6 +39,11 @@ export default function Lobby() {
     load();
     const unsub = db.entities.Game.subscribe((event) => {
       if (cancelled || !event.data || event.data.id !== gameId) return;
+      const removed = findRemovedLobbyPlayers(gameRef.current, event.data);
+      if (removed.length > 0) {
+        setLeaveToast(`${removed.join(", ")} saiu da sala.`);
+      }
+      gameRef.current = event.data;
       setGame(event.data);
       if (event.data.status !== "aguardando") {
         navigate(`/game/${gameId}/${event.data.status}`);
@@ -101,6 +111,25 @@ export default function Lobby() {
     } catch (e) {}
   };
 
+  const setCardsPerPlayerValue = async (raw) => {
+    if (!game) return;
+    const max = calcCardsPerPlayer(game.players.length);
+    let next = parseInt(raw, 10);
+    let warning = "";
+    if (isNaN(next)) return;
+    if (next > max) {
+      warning = `O máximo com ${game.players.length} jogador${game.players.length !== 1 ? "es" : ""} é ${max} carta${max !== 1 ? "s" : ""}. Ajustei pra ${max}.`;
+      next = max;
+    } else if (next < 1) {
+      warning = "O mínimo é 1 carta. Ajustei pra 1.";
+      next = 1;
+    }
+    setCardsWarning(warning);
+    try {
+      await db.entities.Game.update(gameId, { cards_per_player: next });
+    } catch (e) {}
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -123,6 +152,7 @@ export default function Lobby() {
       className="min-h-screen bg-slate-950 app-pad"
       style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.06), transparent 55%)" }}
     >
+      <LeaveToast message={leaveToast} onDone={() => setLeaveToast("")} />
       <div className="max-w-md mx-auto pt-10 pb-16">
         <div className="flex items-center gap-3 mb-8">
           <button onClick={() => navigate("/")} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors">
@@ -172,16 +202,21 @@ export default function Lobby() {
               <div className="flex items-center justify-center gap-4">
                 <button
                   onClick={() => changeCardsPerPlayer(-1)}
-                  className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-xl font-bold flex items-center justify-center transition-colors"
+                  className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-xl font-bold flex items-center justify-center transition-colors shrink-0"
                 >
                   −
                 </button>
-                <span className="text-3xl font-bold text-amber-500 w-12 text-center tabular-nums">
-                  {game.cards_per_player || calcCardsPerPlayer(game.players.length)}
-                </span>
+                <Input
+                  type="number"
+                  min={1}
+                  max={calcCardsPerPlayer(game.players.length)}
+                  value={game.cards_per_player || calcCardsPerPlayer(game.players.length)}
+                  onChange={(e) => setCardsPerPlayerValue(e.target.value)}
+                  className="w-16 text-3xl font-bold text-amber-500 text-center tabular-nums bg-slate-950 border-slate-700 h-12"
+                />
                 <button
                   onClick={() => changeCardsPerPlayer(1)}
-                  className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-xl font-bold flex items-center justify-center transition-colors"
+                  className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-xl font-bold flex items-center justify-center transition-colors shrink-0"
                 >
                   +
                 </button>

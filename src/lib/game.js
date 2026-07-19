@@ -1,6 +1,24 @@
 import { db } from "@/api/gameClient";
 import { createDeck, shuffleDeck, compareCards, getCardStrength } from "./cards";
 
+// Compara o game antigo com o novo e retorna nomes que acabaram de ser
+// marcados como "abandonou" (usado pra mostrar um aviso de saída).
+export function findNewlyAbandoned(oldGame, newGame) {
+  if (!oldGame || !newGame) return [];
+  const before = oldGame.abandoned_players || [];
+  const after = newGame.abandoned_players || [];
+  return after.filter((name) => !before.includes(name));
+}
+
+// Compara a lista de jogadores da sala de espera antes/depois e retorna
+// nomes que saíram (removidos de vez, já que ainda não começou o jogo).
+export function findRemovedLobbyPlayers(oldGame, newGame) {
+  if (!oldGame || !newGame) return [];
+  const before = oldGame.players || [];
+  const after = newGame.players || [];
+  return before.filter((name) => !after.includes(name));
+}
+
 export function generateRoomCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";

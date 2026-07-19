@@ -60,12 +60,13 @@ export default function Home() {
         return;
       }
       const game = games[0];
+      const routeFor = (status) => (status === "aguardando" ? "lobby" : status === "resultados" ? "placar" : status);
       if (game.player_user_ids && game.player_user_ids.includes(playerId)) {
-        navigate(`/game/${game.id}/lobby`);
+        navigate(`/game/${game.id}/${routeFor(game.status)}`);
         return;
       }
-      if (game.status !== "aguardando") {
-        setError("O jogo já começou.");
+      if (game.status !== "aguardando" && game.status !== "resultados") {
+        setError("O jogo está no meio de uma rodada. Aguarde chegar no placar pra entrar.");
         setJoining(false);
         return;
       }
@@ -78,7 +79,7 @@ export default function Home() {
         players: [...game.players, playerName],
         player_user_ids: [...(game.player_user_ids || []), playerId],
       });
-      navigate(`/game/${game.id}/lobby`);
+      navigate(`/game/${game.id}/${routeFor(game.status)}`);
     } catch (e) {
       setError("Erro ao entrar na sala.");
       setJoining(false);
