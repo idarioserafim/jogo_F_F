@@ -133,11 +133,21 @@ export function calcCardsPerPlayer(numPlayers) {
   return Math.floor((40 - 1) / numPlayers);
 }
 
+// Decide quantas cartas por jogador usar nesta mão: respeita o valor
+// escolhido pelo anfitrião (game.cards_per_player), desde que seja válido
+// pra quantidade atual de jogadores; senão, usa o máximo possível.
+export function resolveCardsPerPlayer(game) {
+  const max = calcCardsPerPlayer(game.players.length);
+  const requested = game.cards_per_player;
+  if (requested && requested >= 1 && requested <= max) return requested;
+  return max;
+}
+
 export async function dealRound(gameId, game, hostUserId, newSubRound, newPeIndex) {
   const subRound = newSubRound ?? game.current_sub_round;
   const peIndex = newPeIndex ?? game.current_pe_index ?? 0;
   const numPlayers = game.players.length;
-  const cardsPerPlayer = calcCardsPerPlayer(numPlayers);
+  const cardsPerPlayer = resolveCardsPerPlayer(game);
 
   let deck = shuffleDeck(createDeck());
   const hands = game.players.map(() => []);

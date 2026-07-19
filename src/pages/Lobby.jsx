@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { db } from "@/api/gameClient";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Copy, Check, Users, Play } from "lucide-react";
-import { dealRound, leaveLobby } from "@/lib/game";
+import { dealRound, leaveLobby, calcCardsPerPlayer } from "@/lib/game";
 import { getPlayerId } from "@/lib/localPlayer";
 
 export default function Lobby() {
@@ -15,6 +15,7 @@ export default function Lobby() {
   const [starting, setStarting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [cardsWarning, setCardsWarning] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +44,17 @@ export default function Lobby() {
 
   const isHost = game && game.host_user_id === playerId;
 
+  // Se a quantidade de jogadores mudar (alguém entrou/saiu) e o valor
+  // escolhido de cartas por rodada não couber mais, ajusta sozinho e avisa.
+  useEffect(() => {
+    if (!game || !isHost) return;
+    const max = calcCardsPerPlayer(game.players.length);
+    if (game.cards_per_player && game.cards_per_player > max) {
+      db.entities.Game.update(gameId, { cards_per_player: max }).catch(() => {});
+      setCardsWarning(`A quantidade de jogadores mudou — o máximo agora é ${max} carta${max !== 1 ? "s" : ""}. Ajustei automaticamente.`);
+    }
+  }, [game?.players?.length, isHost]);
+
   const copyCode = () => {
     if (navigator.clipboard && game) {
       navigator.clipboard.writeText(game.room_code);
@@ -68,6 +80,25 @@ export default function Lobby() {
       await leaveLobby(gameId, game, playerId);
     } catch (e) {}
     navigate("/");
+  };
+
+  const changeCardsPerPlayer = async (delta) => {
+    if (!game) return;
+    const max = calcCardsPerPlayer(game.players.length);
+    const current = game.cards_per_player || max;
+    let next = current + delta;
+    let warning = "";
+    if (next > max) {
+      next = max;
+      warning = `O máximo com ${game.players.length} jogador${game.players.length !== 1 ? "es" : ""} é ${max} carta${max !== 1 ? "s" : ""}.`;
+    } else if (next < 1) {
+      next = 1;
+      warning = "O mínimo é 1 carta.";
+    }
+    setCardsWarning(warning);
+    try {
+      await db.entities.Game.update(gameId, { cards_per_player: next });
+    } catch (e) {}
   };
 
   if (loading) {
@@ -132,6 +163,41 @@ export default function Lobby() {
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="mb-6 bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+          <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Cartas por rodada</p>
+          {isHost ? (
+            <>
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={() => changeCardsPerPlayer(-1)}
+                  className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-xl font-bold flex items-center justify-center transition-colors"
+                >
+                  −
+                </button>
+                <span className="text-3xl font-bold text-amber-500 w-12 text-center tabular-nums">
+                  {game.cards_per_player || calcCardsPerPlayer(game.players.length)}
+                </span>
+                <button
+                  onClick={() => changeCardsPerPlayer(1)}
+                  className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-xl font-bold flex items-center justify-center transition-colors"
+                >
+                  +
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 text-center mt-2">
+                Máximo com {game.players.length} jogador{game.players.length !== 1 ? "es" : ""}: {calcCardsPerPlayer(game.players.length)}
+              </p>
+              {cardsWarning && (
+                <p className="text-xs text-amber-400 text-center mt-2">{cardsWarning}</p>
+              )}
+            </>
+          ) : (
+            <p className="text-2xl font-bold text-amber-500 text-center">
+              {game.cards_per_player || calcCardsPerPlayer(game.players.length)}
+            </p>
+          )}
         </div>
 
         {isHost ? (

@@ -53,7 +53,14 @@ export default function Resultados() {
     load();
     const unsub = db.entities.Game.subscribe((event) => {
       if (cancelled || !event.data || event.data.id !== gameId) return;
-      setGame(event.data);
+      const g = event.data;
+      setGame(g);
+      // Se o anfitrião avançou pro placar/próxima rodada, todo mundo precisa
+      // ser levado junto — sem isso, quem não é o anfitrião fica preso aqui.
+      if (g.status === "palpites") { navigate(`/game/${gameId}/palpites`); return; }
+      if (g.status === "mesa") { navigate(`/game/${gameId}/mesa`); return; }
+      if (g.status === "finalizado") { navigate(`/game/${gameId}/placar`); return; }
+      if (g.status === "aguardando") { navigate(`/game/${gameId}/lobby`); return; }
     });
     return () => { cancelled = true; if (typeof unsub === "function") unsub(); };
   }, [gameId]);
@@ -119,17 +126,14 @@ export default function Resultados() {
           </div>
         )}
 
-        {isHost ? (
-          <Button
-            onClick={() => navigate(`/game/${gameId}/placar`)}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold h-12 text-base"
-          >
-            Ver Placar <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        ) : (
-          <div className="w-full text-center text-slate-400 text-sm py-4 bg-slate-900/30 border border-slate-800 rounded-xl">
-            Aguardando o anfitrião...
-          </div>
+        <Button
+          onClick={() => navigate(`/game/${gameId}/placar`)}
+          className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold h-12 text-base"
+        >
+          Ver Placar <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+        {!isHost && (
+          <p className="text-center text-slate-500 text-xs mt-3">Aguardando o anfitrião iniciar a próxima rodada...</p>
         )}
       </div>
     </div>

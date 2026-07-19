@@ -34,7 +34,7 @@ export default function Home() {
         current_sub_round: 1,
         current_pe_index: 0,
         status: "aguardando",
-        cards_per_player: 1,
+        cards_per_player: null,
         tricks_won: [],
       });
       navigate(`/game/${game.id}/lobby`);

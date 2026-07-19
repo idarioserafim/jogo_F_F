@@ -40,7 +40,13 @@ export default function Placar() {
     load();
     const unsub = db.entities.Game.subscribe((event) => {
       if (cancelled || !event.data || event.data.id !== gameId) return;
-      setGame(event.data);
+      const g = event.data;
+      setGame(g);
+      // Mesma lógica do carregamento inicial: se o anfitrião iniciou a
+      // próxima rodada, todo mundo precisa ser levado pra tela de palpites.
+      if (g.status === "palpites") { navigate(`/game/${gameId}/palpites`); return; }
+      if (g.status === "mesa") { navigate(`/game/${gameId}/mesa`); return; }
+      if (g.status === "aguardando") { navigate(`/game/${gameId}/lobby`); return; }
     });
     return () => { cancelled = true; if (typeof unsub === "function") unsub(); };
   }, [gameId]);
