@@ -137,8 +137,12 @@ export default function Mesa() {
               trick_winner: -1,
               trick_tied: true,
               dead_pile: newDeadPile,
-              status: "resultados",
             });
+            setTimeout(async () => {
+              try {
+                await db.entities.Game.update(gameId, { status: "resultados" });
+              } catch (e) {}
+            }, 3000);
           } else {
             await db.entities.Game.update(gameId, {
               current_trick: newTrick,
@@ -168,8 +172,12 @@ export default function Mesa() {
               trick_number: newTrickNumber,
               trick_winner: winner,
               trick_tied: false,
-              status: "resultados",
             });
+            setTimeout(async () => {
+              try {
+                await db.entities.Game.update(gameId, { status: "resultados" });
+              } catch (e) {}
+            }, 3000);
           } else {
             await db.entities.Game.update(gameId, {
               current_trick: newTrick,
