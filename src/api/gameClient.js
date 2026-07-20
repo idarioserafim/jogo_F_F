@@ -58,3 +58,17 @@ export const db = {
     RoundEntry: makeEntityClient("RoundEntry"),
   },
 };
+
+// Chat da sala: mensagens ficam restritas à sala (gameId), diferente das
+// entidades acima que são globais. Guardado em memória no servidor, junto
+// com o resto — some se o servidor reiniciar.
+export const chat = {
+  join: (gameId) => socket.emit("chat:join", gameId),
+  history: (gameId) => call("chat:history", gameId),
+  send: (gameId, playerId, playerName, text) =>
+    call("chat:message", gameId, { playerId, playerName, text }),
+  subscribe: (callback) => {
+    socket.on("chat:message", callback);
+    return () => socket.off("chat:message", callback);
+  },
+};

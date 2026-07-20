@@ -7,6 +7,7 @@ import { ArrowLeft, Copy, Check, Users, Play } from "lucide-react";
 import { dealRound, leaveLobby, calcCardsPerPlayer, findRemovedLobbyPlayers } from "@/lib/game";
 import { getPlayerId } from "@/lib/localPlayer";
 import LeaveToast from "@/components/LeaveToast";
+import ChatPanel from "@/components/ChatPanel";
 
 export default function Lobby() {
   const { gameId } = useParams();
@@ -153,6 +154,7 @@ export default function Lobby() {
       style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.06), transparent 55%)" }}
     >
       <LeaveToast message={leaveToast} onDone={() => setLeaveToast("")} />
+      <ChatPanel gameId={gameId} />
       <div className="max-w-md mx-auto pt-10 pb-16">
         <div className="flex items-center gap-3 mb-8">
           <button onClick={() => navigate("/")} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors">

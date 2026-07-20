@@ -41,7 +41,39 @@ function broadcastDelete(entityName, id) {
   io.emit(`entity:${entityName}:deleted`, { id });
 }
 
+// Histórico de chat por sala (só os últimos 100 recados de cada sala,
+// perdido se o servidor reiniciar — igual ao resto do "banco de dados").
+const chatHistory = new Map(); // gameId -> [{id, playerId, playerName, text, created_date}]
+
 io.on("connection", (socket) => {
+  socket.on("chat:join", (gameId) => {
+    socket.join(`chat:${gameId}`);
+  });
+
+  socket.on("chat:history", (gameId, cb) => {
+    cb && cb(chatHistory.get(gameId) || []);
+  });
+
+  socket.on("chat:message", (gameId, message, cb) => {
+    try {
+      const entry = {
+        id: randomUUID(),
+        playerId: message.playerId,
+        playerName: message.playerName,
+        text: String(message.text || "").slice(0, 300),
+        created_date: new Date().toISOString(),
+      };
+      const history = chatHistory.get(gameId) || [];
+      history.push(entry);
+      if (history.length > 100) history.shift();
+      chatHistory.set(gameId, history);
+      io.to(`chat:${gameId}`).emit("chat:message", entry);
+      cb && cb(entry);
+    } catch (e) {
+      cb && cb({ error: String(e) });
+    }
+  });
+
   socket.on("entity:create", (entityName, data, cb) => {
     try {
       const collection = db[entityName];
@@ -140,6 +172,7 @@ io.on("connection", (socket) => {
     toDelete.forEach((r) => {
       collection.delete(r.id);
       broadcastDelete(entityName, r.id);
+      if (entityName === "Game") chatHistory.delete(r.id);
     });
     cb && cb(toDelete.length);
   });

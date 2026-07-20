@@ -6,6 +6,7 @@ import { Trophy, RotateCcw, ArrowRight, ChevronDown, ChevronRight, LogOut, Crown
 import { dealRound, leaveGame, findNewlyAbandoned } from "@/lib/game";
 import { getPlayerId } from "@/lib/localPlayer";
 import LeaveToast from "@/components/LeaveToast";
+import ChatPanel from "@/components/ChatPanel";
 
 export default function Placar() {
   const { gameId } = useParams();
@@ -139,6 +140,7 @@ export default function Placar() {
       style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.06), transparent 55%)" }}
     >
       <LeaveToast message={leaveToast} onDone={() => setLeaveToast("")} />
+      <ChatPanel gameId={gameId} />
       <div className="max-w-md mx-auto pt-10 pb-16">
         {isFinished && activeStandings[0] && (
           <div className="mb-6 p-5 rounded-2xl bg-amber-500/10 border border-amber-500/40 text-center">

@@ -9,6 +9,7 @@ import { calcCardsPerPlayer } from "@/lib/game";
 import { sortHand } from "@/lib/cards";
 import { getPlayerId } from "@/lib/localPlayer";
 import LeaveToast from "@/components/LeaveToast";
+import ChatPanel from "@/components/ChatPanel";
 
 export default function Mesa() {
   const { gameId } = useParams();
@@ -213,6 +214,7 @@ export default function Mesa() {
       style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.06), transparent 55%)" }}
     >
       <LeaveToast message={leaveToast} onDone={() => setLeaveToast("")} />
+      <ChatPanel gameId={gameId} />
       <div className="max-w-md mx-auto pt-10 pb-20">
         <div className="flex items-center gap-3 mb-4">
           <button onClick={() => navigate("/")} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors">
@@ -285,13 +287,16 @@ export default function Mesa() {
                   {play ? (
                     <CardView card={play.card} size="lg" disabled />
                   ) : (
-                    <div
-                      className={`w-[4.5rem] h-[6.5rem] rounded-lg border-2 border-dashed flex items-center justify-center ${
+                    <button
+                      type="button"
+                      disabled
+                      tabIndex={-1}
+                      className={`w-[4.5rem] h-[6.5rem] rounded-lg border-2 border-dashed flex items-center justify-center cursor-default ${
                         isNext ? "border-amber-500/50" : "border-slate-800"
                       }`}
                     >
                       {isNext && <span className="text-amber-500/70 text-lg">…</span>}
-                    </div>
+                    </button>
                   )}
                 </div>
               );

@@ -41,8 +41,11 @@ const BLACK = "#0b0b0d";
 
 function CardBack({ sizeClass }) {
   return (
-    <div
-      className={`${sizeClass} rounded-lg border-2 border-slate-200 shrink-0 shadow-sm`}
+    <button
+      type="button"
+      disabled
+      tabIndex={-1}
+      className={`${sizeClass} rounded-lg border-2 border-slate-200 shrink-0 shadow-sm cursor-default`}
       style={{
         backgroundColor: "#1d4ed8",
         backgroundImage:
@@ -54,7 +57,14 @@ function CardBack({ sizeClass }) {
 }
 
 function CardEmpty({ sizeClass }) {
-  return <div className={`${sizeClass} rounded-lg border-2 border-dashed border-slate-300/40 bg-transparent shrink-0`} />;
+  return (
+    <button
+      type="button"
+      disabled
+      tabIndex={-1}
+      className={`${sizeClass} rounded-lg border-2 border-dashed border-slate-300/40 bg-transparent shrink-0 cursor-default`}
+    />
+  );
 }
 
 export default function CardView({ card, size = "md", disabled, onClick, hidden }) {

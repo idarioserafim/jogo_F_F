@@ -9,6 +9,7 @@ import { getActivePlayerOrders, calcCardsPerPlayer, leaveGame, findNewlyAbandone
 import { sortHand } from "@/lib/cards";
 import { getPlayerId } from "@/lib/localPlayer";
 import LeaveToast from "@/components/LeaveToast";
+import ChatPanel from "@/components/ChatPanel";
 
 export default function Palpites() {
   const { gameId } = useParams();
@@ -133,11 +134,17 @@ export default function Palpites() {
     .reduce((s, e) => s + (e.palpite || 0), 0);
   const forbiddenBet = isPe ? cardsPerPlayer - totalBets : null;
   const allBetsIn = activeOrders.every((order) => entries.some((e) => e.player_order === order));
+  // O pé só pode apostar depois de todo mundo, porque a aposta proibida dele
+  // depende de já saber a soma exata dos palpites dos outros.
+  const othersHaveBet = activeOrders
+    .filter((order) => order !== mySeat)
+    .every((order) => entries.some((e) => e.player_order === order));
 
   const submitBet = async () => {
     const bet = Number(myBet);
     if (myBet === "" || isNaN(bet)) return;
     if (bet < 0) return;
+    if (isPe && !othersHaveBet) return;
     if (isPe && bet === forbiddenBet) return;
     setSaving(true);
     try {
@@ -173,7 +180,7 @@ export default function Palpites() {
   };
 
   const vira = game.vira;
-  const isMyBetValid = myBet !== "" && !isNaN(Number(myBet)) && Number(myBet) >= 0 && !(isPe && Number(myBet) === forbiddenBet);
+  const isMyBetValid = myBet !== "" && !isNaN(Number(myBet)) && Number(myBet) >= 0 && !(isPe && Number(myBet) === forbiddenBet) && !(isPe && !othersHaveBet);
 
   const leaveRoom = async () => {
     setLeaving(true);
@@ -189,6 +196,7 @@ export default function Palpites() {
       style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.06), transparent 55%)" }}
     >
       <LeaveToast message={leaveToast} onDone={() => setLeaveToast("")} />
+      <ChatPanel gameId={gameId} />
       <div className="max-w-md mx-auto pt-10 pb-16">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => navigate("/")} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors">
@@ -255,7 +263,10 @@ export default function Palpites() {
                         Pé
                       </span>
                     )}
-                    {isPe && forbiddenBet !== null && forbiddenBet >= 0 && (
+                    {isPe && !othersHaveBet && (
+                      <p className="text-xs text-slate-500 mt-1">Aguardando os outros apostarem primeiro...</p>
+                    )}
+                    {isPe && othersHaveBet && forbiddenBet !== null && forbiddenBet >= 0 && (
                       <p className="text-xs text-red-400 mt-1">Não pode apostar {forbiddenBet}</p>
                     )}
                   </div>
@@ -266,7 +277,8 @@ export default function Palpites() {
                       value={myBet}
                       onChange={(e) => setMyBet(e.target.value)}
                       placeholder="0"
-                      className="bg-slate-950 border-slate-700 text-white text-center text-lg font-bold h-11"
+                      disabled={isPe && !othersHaveBet}
+                      className="bg-slate-950 border-slate-700 text-white text-center text-lg font-bold h-11 disabled:opacity-40"
                     />
                   </div>
                 </div>
