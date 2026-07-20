@@ -129,13 +129,8 @@ export default function Palpites() {
   const peIndex = game.current_pe_index ?? 0;
   const isPe = mySeat === peIndex;
   const cardsPerPlayer = game.cards_per_player || 1;
-  const totalBets = entries
-    .filter((e) => e.player_order !== peIndex)
-    .reduce((s, e) => s + (e.palpite || 0), 0);
-  const forbiddenBet = isPe ? cardsPerPlayer - totalBets : null;
   const allBetsIn = activeOrders.every((order) => entries.some((e) => e.player_order === order));
-  // O pé só pode apostar depois de todo mundo, porque a aposta proibida dele
-  // depende de já saber a soma exata dos palpites dos outros.
+  // O pé só pode apostar depois de todo mundo apostar (ordem do jogo).
   const othersHaveBet = activeOrders
     .filter((order) => order !== mySeat)
     .every((order) => entries.some((e) => e.player_order === order));
@@ -145,7 +140,6 @@ export default function Palpites() {
     if (myBet === "" || isNaN(bet)) return;
     if (bet < 0) return;
     if (isPe && !othersHaveBet) return;
-    if (isPe && bet === forbiddenBet) return;
     setSaving(true);
     try {
       if (myEntry) {
@@ -180,7 +174,7 @@ export default function Palpites() {
   };
 
   const vira = game.vira;
-  const isMyBetValid = myBet !== "" && !isNaN(Number(myBet)) && Number(myBet) >= 0 && !(isPe && Number(myBet) === forbiddenBet) && !(isPe && !othersHaveBet);
+  const isMyBetValid = myBet !== "" && !isNaN(Number(myBet)) && Number(myBet) >= 0 && !(isPe && !othersHaveBet);
 
   const leaveRoom = async () => {
     setLeaving(true);
@@ -265,9 +259,6 @@ export default function Palpites() {
                     )}
                     {isPe && !othersHaveBet && (
                       <p className="text-xs text-slate-500 mt-1">Aguardando os outros apostarem primeiro...</p>
-                    )}
-                    {isPe && othersHaveBet && forbiddenBet !== null && forbiddenBet >= 0 && (
-                      <p className="text-xs text-red-400 mt-1">Não pode apostar {forbiddenBet}</p>
                     )}
                   </div>
                   <div className="w-20">
