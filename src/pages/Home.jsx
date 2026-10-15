@@ -96,7 +96,7 @@ export default function Home() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 mb-4">
             <Spade className="w-8 h-8 text-amber-500" fill="currentColor" />
           </div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">Fodinha</h1>
+          <h1 className="text-4xl font-bold text-white tracking-tight">Fófó</h1>
           <p className="text-slate-400 mt-2 text-sm">Jogue online com seus amigos</p>
         </div>
 

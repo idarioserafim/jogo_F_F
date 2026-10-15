@@ -1,6 +1,6 @@
 # Fofó
 
-Jogo de cartas online (Fodinha) — sala com código, palpites, mesa e placar,
+Jogo de cartas online (Fófó) — sala com código, palpites, mesa e placar,
 para jogar com a família pelo navegador.
 
 Projeto independente: **não usa Base44** nem nenhum serviço externo. O
